@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physics Engine Web Example</title>
+    <script type="module">
+        import PhysicsEngine from '../src/index.js';
+
+        const engine = new PhysicsEngine();
+
+        engine.addObject({
+            id: 'box',
+            position: { x: 0, y: 5 },
+            velocity: { x: 2, y: -1 }
+        });
+
+        console.log('Initial State:', engine.simulation);
+
+        engine.update(0.5);
+
+        console.log('After 0.5s:', engine.simulation);
+
+        const yamlData = engine.exportToYAML();
+        console.log('Exported YAML:\n', yamlData);
+
+        engine.importFromYAML(yamlData);
+        console.log('Imported State:', engine.simulation);
+    </script>
+</head>
+<body>
+    <h1>Physics Engine Web Example</h1>
+    <p>Open the browser console to see the simulation results.</p>
+</body>
+</html>

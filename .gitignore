@@ -1,1 +1,3 @@
-*.project-outline.txt
+ai.*
+.ai*
+.gitignore
