@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>Double Pendulum — doublePen</title>
+
+        <!-- External stylesheet (create at src/styles.css) -->
+        <link rel="stylesheet" href="src/styles.css" />
+
+        <!-- Minimal inline styles to ensure layout is usable before CSS file is created -->
+        <style>
+            :root {
+                --sidebar-width: 300px;
+                --topbar-height: 56px;
+                --footer-height: 220px;
+                --gap: 12px;
+                --bg: #0f1720;
+                --panel-bg: #0b1220;
+                --muted: #9aa7b2;
+                --accent: #3ddc84;
+                color-scheme: dark;
+            }
+
+            html,
+            body {
+                height: 100%;
+                margin: 0;
+                font-family:
+                    Inter,
+                    system-ui,
+                    -apple-system,
+                    "Segoe UI",
+                    Roboto,
+                    "Helvetica Neue",
+                    Arial;
+                background: linear-gradient(180deg, #071018 0%, #08121b 100%);
+                color: #e6eef3;
+            }
+
+            /* Grid layout: topbar, sidebar, main, footer (graphs) */
+            .app-grid {
+                display: grid;
+                grid-template-columns: var(--sidebar-width) 1fr;
+                grid-template-rows: var(--topbar-height) 1fr var(
+                        --footer-height
+                    );
+                gap: var(--gap);
+                height: 100vh;
+                padding: var(--gap);
+                box-sizing: border-box;
+                align-items: stretch;
+            }
+
+            .topbar {
+                grid-column: 1 / -1;
+                height: var(--topbar-height);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: rgba(255, 255, 255, 0.02);
+                border-radius: 8px;
+                padding: 0 12px;
+                box-shadow: 0 1px 0 rgba(255, 255, 255, 0.02) inset;
+            }
+
+            .controls {
+                display: flex;
+                gap: 8px;
+            }
+
+            .controls button {
+                background: linear-gradient(180deg, #1f2937, #111827);
+                color: #e6eef3;
+                border: 1px solid rgba(255, 255, 255, 0.04);
+                padding: 8px 14px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: 600;
+                letter-spacing: 0.2px;
+            }
+
+            .controls button:active {
+                transform: translateY(1px);
+            }
+
+            .sidebar {
+                padding: 12px;
+                background: rgba(255, 255, 255, 0.02);
+                border-radius: 8px;
+                overflow: auto;
+            }
+
+            .sidebar h3 {
+                margin: 0 0 8px 0;
+                font-size: 1rem;
+                color: var(--accent);
+            }
+
+            .sidebar label {
+                display: block;
+                margin: 8px 0;
+                font-size: 0.9rem;
+                color: var(--muted);
+            }
+
+            .sidebar input[type="number"] {
+                width: 100%;
+                margin-top: 6px;
+                padding: 6px 8px;
+                border-radius: 6px;
+                border: 1px solid rgba(255, 255, 255, 0.03);
+                background: rgba(0, 0, 0, 0.2);
+                color: inherit;
+            }
+
+            .sidebar button {
+                margin-top: 8px;
+                width: 100%;
+                padding: 10px;
+                border-radius: 6px;
+                border: none;
+                background: linear-gradient(180deg, #0ea5a4, #0284c7);
+                color: white;
+                cursor: pointer;
+                font-weight: 600;
+            }
+
+            .main {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 12px;
+            }
+
+            .sim-wrap {
+                width: 100%;
+                height: 100%;
+                max-width: 920px;
+                max-height: 720px;
+                background: radial-gradient(
+                    ellipse at center,
+                    rgba(255, 255, 255, 0.02),
+                    rgba(0, 0, 0, 0.02)
+                );
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+                box-shadow: 0 8px 24px rgba(2, 6, 23, 0.6);
+                overflow: hidden;
+            }
+
+            /* Canvas is centered and responsive */
+            #simCanvas {
+                width: 100%;
+                height: 100%;
+                display: block;
+                background: transparent;
+            }
+
+            .footer {
+                grid-column: 1 / -1;
+                padding: 12px;
+                background: rgba(255, 255, 255, 0.02);
+                border-radius: 8px;
+                display: flex;
+                gap: 12px;
+                align-items: stretch;
+                overflow: hidden;
+            }
+
+            .graphs {
+                flex: 1;
+                display: flex;
+                gap: 12px;
+                align-items: stretch;
+            }
+
+            #graphCanvas {
+                width: 100%;
+                height: 100%;
+                background: linear-gradient(
+                    180deg,
+                    rgba(255, 255, 255, 0.01),
+                    rgba(0, 0, 0, 0.02)
+                );
+                border-radius: 6px;
+                display: block;
+            }
+
+            /* Responsive tweaks */
+            @media (max-width: 900px) {
+                .app-grid {
+                    grid-template-columns: 1fr;
+                    grid-template-rows: var(--topbar-height) auto auto;
+                }
+                .sidebar {
+                    order: 3;
+                }
+                .main {
+                    order: 2;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div
+            class="app-grid"
+            role="application"
+            aria-label="Double pendulum simulator"
+        >
+            <!-- Top controls -->
+            <header class="topbar" role="banner">
+                <div
+                    class="controls"
+                    role="group"
+                    aria-label="Playback controls"
+                >
+                    <button id="playBtn" title="Play simulation">Play</button>
+                    <button id="pauseBtn" title="Pause simulation">
+                        Pause
+                    </button>
+                    <button id="resetBtn" title="Reset simulation">
+                        Reset
+                    </button>
+                </div>
+            </header>
+
+            <!-- Left settings panel -->
+            <aside class="sidebar" role="region" aria-label="Settings panel">
+                <h3>Simulation Settings</h3>
+
+                <form
+                    id="settingsForm"
+                    autocomplete="off"
+                    onsubmit="return false;"
+                >
+                    <label>
+                        m1
+                        <input
+                            type="number"
+                            name="m1"
+                            step="0.1"
+                            value="1.0"
+                            aria-label="mass 1"
+                        />
+                    </label>
+
+                    <label>
+                        m2
+                        <input
+                            type="number"
+                            name="m2"
+                            step="0.1"
+                            value="1.0"
+                            aria-label="mass 2"
+                        />
+                    </label>
+
+                    <label>
+                        l1 (px)
+                        <input
+                            type="number"
+                            name="l1"
+                            step="1"
+                            value="150"
+                            aria-label="length 1"
+                        />
+                    </label>
+
+                    <label>
+                        l2 (px)
+                        <input
+                            type="number"
+                            name="l2"
+                            step="1"
+                            value="150"
+                            aria-label="length 2"
+                        />
+                    </label>
+
+                    <label>
+                        g (m/s²)
+                        <input
+                            type="number"
+                            name="g"
+                            step="0.01"
+                            value="9.81"
+                            aria-label="gravity"
+                        />
+                    </label>
+
+                    <label>
+                        Drag (linear)
+                        <input
+                            type="number"
+                            name="drag"
+                            step="0.001"
+                            value="0.0"
+                            aria-label="drag"
+                        />
+                    </label>
+
+                    <label>
+                        dt (s)
+                        <input
+                            type="number"
+                            name="dt"
+                            step="0.00001"
+                            value="0.0041667"
+                            aria-label="time step"
+                        />
+                    </label>
+
+                    <hr style="opacity: 0.06; margin: 10px 0" />
+
+                    <button type="button" id="presetSmall">
+                        Preset: Small angle
+                    </button>
+                    <button
+                        type="button"
+                        id="presetChaotic"
+                        style="margin-top: 8px"
+                    >
+                        Preset: Chaotic
+                    </button>
+                </form>
+            </aside>
+
+            <!-- Main simulation area -->
+            <main class="main" role="main" aria-label="Simulation area">
+                <div class="sim-wrap" aria-hidden="false">
+                    <!-- Simulation canvas: JS should handle resizing its internal resolution -->
+                    <canvas
+                        id="simCanvas"
+                        width="800"
+                        height="600"
+                        role="img"
+                        aria-label="Double pendulum simulation canvas"
+                    ></canvas>
+                </div>
+            </main>
+
+            <!-- Graphs area -->
+            <footer class="footer" role="contentinfo">
+                <div class="graphs" aria-label="Graphs area">
+                    <!-- Graph canvas (you can use multiple canvases later) -->
+                    <canvas
+                        id="graphCanvas"
+                        width="1400"
+                        height="200"
+                        role="img"
+                        aria-label="Graphs for energy and variables"
+                    ></canvas>
+                </div>
+            </footer>
+        </div>
+
+        <!-- Main application script (create at src/main.js) -->
+        <script type="module" src="src/main.js"></script>
+    </body>
+</html>
